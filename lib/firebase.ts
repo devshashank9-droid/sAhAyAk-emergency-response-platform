@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+// 1. ADD setPersistence and browserLocalPersistence to this import:
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth"; 
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -8,21 +9,19 @@ const firebaseConfig = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase (preventing multiple initializations in Next.js)
+// Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Force Firebase to remember the user locally on the device
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log("Firebase local persistence enabled");
-  })
-  .catch((error) => {
-    console.error("Auth persistence error:", error);
+// 2. ADD THIS FIX: Force Firebase to remember the user on this device forever
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error("Firebase persistence error:", error);
   });
+}
 
 export { app, auth, db };
