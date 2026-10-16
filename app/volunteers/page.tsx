@@ -127,7 +127,10 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
   const [passedIncidents, setPassedIncidents] = useState<string[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<[number, number] | null>(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
-  const [audioEnabled, setAudioEnabled] = useState(false);
+  
+  // Audio enabled by default now
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const [expandedIncidents, setExpandedIncidents] = useState<string[]>([]);
   const previousCountRef = useRef<number | null>(null);
@@ -289,18 +292,30 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
             <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-md border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.2)] hidden sm:block">Active ID: {volunteerProfile?.name || user.email}</span>
           </div>
 
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 font-black tracking-widest text-xl sm:text-2xl z-0 pointer-events-none">
-            <ShieldAlert className="text-red-500 w-5 h-5 sm:w-6 sm:h-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-[pulse_2s_ease-in-out_infinite]" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-400 to-red-500 animate-[pulse_3s_ease-in-out_infinite] drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
-              sAhAyAk
-            </span>
+          {/* Updated Logo with Interactive Tooltip */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center z-50">
+            <div 
+              className="flex items-center gap-2 font-black tracking-widest text-xl sm:text-2xl cursor-pointer pointer-events-auto"
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip(!showTooltip)}
+            >
+              <ShieldAlert className="text-red-500 w-5 h-5 sm:w-6 sm:h-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-[pulse_2s_ease-in-out_infinite]" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-400 to-red-500 animate-[pulse_3s_ease-in-out_infinite] drop-shadow-[0_0_10px_rgba(239,68,68,0.3)] select-none">
+                sAhAyAk
+              </span>
+            </div>
+            
+            {/* Transparent Window / Tooltip */}
+            {showTooltip && (
+              <div className="absolute top-full mt-2 w-max bg-black/70 backdrop-blur-md text-white text-sm px-4 py-2 rounded-lg shadow-xl border border-white/10 transition-opacity duration-200 pointer-events-none">
+                for your safety... <span className="text-[10px] text-zinc-400 ml-1">(by shashank)</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3 relative z-10">
-            <button onClick={() => { setAudioEnabled(!audioEnabled); if (!audioEnabled) playSiren(); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md border ${audioEnabled ? "bg-red-500/20 text-red-400 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]" : "bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10"}`}>
-              {audioEnabled ? <Volume2 className="w-4 h-4 animate-pulse" /> : <VolumeX className="w-4 h-4" />}
-              {audioEnabled ? "Siren Active" : "Enable Siren"}
-            </button>
+            {/* Siren toggle removed from here as requested */}
             <button onClick={() => signOut(auth)} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-red-400 transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl border border-white/5">
               <LogOut className="w-4 h-4" /> Logout
             </button>
@@ -308,9 +323,9 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
         </div>
       </nav>
 
-      <div className="max-w-[90rem] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 relative items-start z-10">
+      <div className="max-w-[90rem] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 relative items-start z-10 pb-24">
 
-        <div className="lg:col-span-4 flex flex-col gap-6 pb-20">
+        <div className="lg:col-span-4 flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-black tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">COMMAND CENTER</h1>
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-4 py-1.5 rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.3)] backdrop-blur-md">
@@ -475,6 +490,26 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
         </div>
 
       </div>
+
+      {/* FLOATING BOTTOM BUTTON FOR SIREN */}
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[100]">
+        {audioEnabled ? (
+          <button
+            onClick={() => setAudioEnabled(false)}
+            className="bg-red-600/90 hover:bg-red-700 text-white px-6 py-3 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(239,68,68,0.4)] backdrop-blur-md transition-all border border-red-500 flex items-center gap-2"
+          >
+            <Volume2 className="w-4 h-4 animate-pulse" /> Disable Siren
+          </button>
+        ) : (
+          <button
+            onClick={() => { setAudioEnabled(true); playSiren(); }}
+            className="bg-zinc-800/90 hover:bg-zinc-700 text-zinc-300 px-6 py-3 rounded-full text-sm font-bold shadow-xl backdrop-blur-md transition-all border border-white/10 flex items-center gap-2"
+          >
+            <VolumeX className="w-4 h-4" /> Enable Siren
+          </button>
+        )}
+      </div>
+
     </main>
   );
 }
