@@ -22,6 +22,9 @@ export default function Home() {
   const [incidentId, setIncidentId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  
+  // New state for the interactive tooltip
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const [responderInfo, setResponderInfo] = useState<{name: string, phone: string} | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -227,11 +230,27 @@ export default function Home() {
 
       <nav className="w-full border-b border-white/5 bg-[#020617]/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-black tracking-widest text-lg">
-            <ShieldAlert className="text-blue-500 w-5 h-5 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-[pulse_2s_ease-in-out_infinite]" /> 
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-blue-400 animate-[pulse_3s_ease-in-out_infinite] drop-shadow-md">
-              sAhAyAk
-            </span>
+          
+          {/* sAhAyAk Logo with Interactive Tooltip */}
+          <div className="relative flex flex-col items-start z-50">
+            <div 
+              className="flex items-center gap-2 font-black tracking-widest text-lg cursor-pointer pointer-events-auto"
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip(!showTooltip)}
+            >
+              <ShieldAlert className="text-blue-500 w-5 h-5 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-[pulse_2s_ease-in-out_infinite]" /> 
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-blue-400 animate-[pulse_3s_ease-in-out_infinite] drop-shadow-md select-none">
+                sAhAyAk
+              </span>
+            </div>
+            
+            {/* Transparent Window / Tooltip */}
+            {showTooltip && (
+              <div className="absolute top-full mt-2 left-0 w-max bg-black/75 backdrop-blur-md text-white text-sm px-4 py-2 rounded-lg shadow-xl border border-white/10 transition-opacity duration-200 pointer-events-none">
+                for your safety... <span className="text-[10px] text-zinc-400 ml-1">(by shashank)</span>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 items-center">
