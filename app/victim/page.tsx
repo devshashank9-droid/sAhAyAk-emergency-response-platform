@@ -15,7 +15,7 @@ const LiveMap = dynamic(() => import("@/components/Map"), {
 interface Contact { name: string; phone: string; }
 interface UserProfile { name: string; age: string; weight: string; height: string; bloodGroup: string; medicalInfo: string; }
 
-// --- NEW MATH FUNCTION FOR BACKGROUND NOTIFICATIONS ---
+// --- MATH FUNCTION FOR BACKGROUND NOTIFICATIONS ---
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371e3; // Earth's radius in meters
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -32,7 +32,6 @@ export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   
-  // New state for the interactive tooltip
   const [showTooltip, setShowTooltip] = useState(false);
 
   const [responderInfo, setResponderInfo] = useState<{name: string, phone: string} | null>(null);
@@ -196,7 +195,7 @@ export default function Home() {
 
   if (!userProfile) {
     return (
-      <main className="min-h-screen relative text-white flex flex-col items-center justify-center p-6 selection:bg-blue-500/30 overflow-hidden">
+      <main suppressHydrationWarning className="min-h-screen relative text-white flex flex-col items-center justify-center p-6 selection:bg-blue-500/30 overflow-hidden">
         <div className="fixed inset-0 z-[-1] bg-[#020617] overflow-hidden">
           <style>{`
             @keyframes mesh1 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(50px, 80px) scale(1.1); } }
@@ -214,7 +213,7 @@ export default function Home() {
           <div className="flex justify-center mb-6"><HeartPulse className="w-12 h-12 text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]" /></div>
           <h1 className="text-2xl font-black text-center mb-2 tracking-tight">Medical ID Setup</h1>
           <p className="text-slate-400 text-sm text-center mb-8">This information is sent directly to emergency responders when you trigger an SOS.</p>
-          <form onSubmit={saveProfile} className="flex flex-col gap-4 relative z-10">
+          <form suppressHydrationWarning onSubmit={saveProfile} className="flex flex-col gap-4 relative z-10">
             <input required type="text" placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-blue-500 outline-none transition-colors backdrop-blur-sm" />
             <div className="grid grid-cols-2 gap-4">
               <input required type="number" placeholder="Age" value={formData.age} onChange={e => setFormData({...formData, age: e.target.value})} className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-blue-500 outline-none transition-colors backdrop-blur-sm" />
@@ -240,7 +239,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen relative text-white flex flex-col items-center selection:bg-blue-500/30 overflow-hidden">
+    <main suppressHydrationWarning className="min-h-screen relative text-white flex flex-col items-center selection:bg-blue-500/30 overflow-hidden">
       
       <div className="fixed inset-0 z-[-1] bg-[#020617] overflow-hidden">
         <style>{`
@@ -268,7 +267,6 @@ export default function Home() {
       <nav className="w-full border-b border-white/5 bg-[#020617]/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
           
-          {/* sAhAyAk Logo with Interactive Tooltip */}
           <div className="relative flex flex-col items-start z-50">
             <div 
               className="flex items-center gap-2 font-black tracking-widest text-lg cursor-pointer pointer-events-auto"
@@ -282,7 +280,6 @@ export default function Home() {
               </span>
             </div>
             
-            {/* Transparent Window / Tooltip */}
             {showTooltip && (
               <div className="absolute top-full mt-2 left-0 w-max bg-black/75 backdrop-blur-md text-white text-sm px-4 py-2 rounded-lg shadow-xl border border-white/10 transition-opacity duration-200 pointer-events-none">
                 for your safety... <span className="text-[10px] text-zinc-400 ml-1">(by shashank)</span>
@@ -394,7 +391,6 @@ export default function Home() {
             {contacts.length === 0 && <span className="text-xs text-slate-400">No contacts saved yet.</span>}
             {contacts.map((contact, idx) => (
               <div key={idx} className="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/5 shadow-inner">
-                {/* Contact Name & Phone separated onto distinct lines */}
                 <div>
                   <div className="text-sm font-bold text-slate-100 mb-1">{contact.name}</div>
                   <div className="text-xs text-blue-400 font-mono">{contact.phone}</div>
@@ -407,11 +403,10 @@ export default function Home() {
             ))}
           </div>
           
-          {/* New Stacked Input Layout with Save Button */}
           {status === "idle" && (
             <div className="flex flex-col gap-3 mt-4 relative z-10">
-              <input type="text" placeholder="Contact Name (e.g., Mom)" value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 transition-colors text-white backdrop-blur-sm" />
-              <input type="tel" placeholder="Phone Number" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 transition-colors text-white backdrop-blur-sm" />
+              <input suppressHydrationWarning type="text" placeholder="Contact Name (e.g., Mom)" value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 transition-colors text-white backdrop-blur-sm" />
+              <input suppressHydrationWarning type="tel" placeholder="Phone Number" value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 transition-colors text-white backdrop-blur-sm" />
               <button 
                 onClick={addContact} 
                 disabled={!newName.trim() || !newPhone.trim()} 
