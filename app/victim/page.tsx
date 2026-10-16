@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { ShieldAlert, Activity, Navigation, Clock, UserCheck, Phone, Plus, Trash2, Flame, HeartPulse, User, MessageSquare, X, WifiOff } from "lucide-react";
-import { collection, addDoc, serverTimestamp, doc, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Chat from "@/components/Chat";
 
@@ -14,6 +14,15 @@ const LiveMap = dynamic(() => import("@/components/Map"), {
 
 interface Contact { name: string; phone: string; }
 interface UserProfile { name: string; age: string; weight: string; height: string; bloodGroup: string; medicalInfo: string; }
+
+// --- NEW MATH FUNCTION FOR BACKGROUND NOTIFICATIONS ---
+function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return Math.round(R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))));
+}
 
 export default function Home() {
   const { location, error } = useGeolocation();
@@ -138,6 +147,7 @@ export default function Home() {
 
     setStatus("sending");
     try {
+      // 1. Create the incident in the database
       const docRef = await addDoc(collection(db, "incidents"), {
         location: { latitude: location[0], longitude: location[1] },
         status: "active", 
@@ -148,6 +158,33 @@ export default function Home() {
       });
       setIncidentId(docRef.id);
       setStatus("searching");
+
+      // 2. Trigger the Push Notifications to all Volunteers
+      const volSnapshot = await getDocs(collection(db, "volunteers"));
+      const tokens: string[] = [];
+      let closestDistance = Infinity;
+
+      volSnapshot.forEach((doc) => {
+        const vol = doc.data();
+        if (vol.fcmToken && vol.lat && vol.lng) {
+          tokens.push(vol.fcmToken);
+          const dist = getDistanceInMeters(location[0], location[1], vol.lat, vol.lng);
+          if (dist < closestDistance) closestDistance = dist;
+        }
+      });
+
+      if (tokens.length > 0) {
+        await fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tokens: tokens,
+            distance: closestDistance === Infinity ? "unknown" : closestDistance,
+            emergencyType: "Medical"
+          })
+        });
+      }
+
     } catch (err) {
       console.error(err);
       alert("Data network failed to reach Command Center. Initiating Deadzone Protocol (SMS Fallback).");

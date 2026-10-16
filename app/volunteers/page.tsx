@@ -3,8 +3,9 @@ import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseUser } from "firebase/auth";
 import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, setDoc, getDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
-import { ShieldAlert, MapPin, AlertTriangle, Volume2, VolumeX, CheckCircle2, ChevronLeft, PhoneCall, HeartPulse, Stethoscope, Droplet, Check, X, Mail, Lock, User, Phone, LogOut, ShieldCheck, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { db, auth, app } from "@/lib/firebase";
+import { ShieldAlert, MapPin, AlertTriangle, Volume2, VolumeX, CheckCircle2, ChevronLeft, PhoneCall, HeartPulse, Stethoscope, Droplet, Check, X, Mail, Lock, User, Phone, LogOut, ShieldCheck, ChevronDown, ChevronUp, Sparkles, Bell } from "lucide-react";
+import { getMessaging, getToken } from "firebase/messaging";
 import Chat from "@/components/Chat";
 
 const LiveMap = dynamic(() => import("@/components/Map"), {
@@ -131,6 +132,7 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
   // Audio enabled by default now
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   const [expandedIncidents, setExpandedIncidents] = useState<string[]>([]);
   const previousCountRef = useRef<number | null>(null);
@@ -140,6 +142,33 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
   const [aiSummaries, setAiSummaries] = useState<Record<string, string>>({});
   const [isAiLoading, setIsAiLoading] = useState<Record<string, boolean>>({});
   const [triageLanguage, setTriageLanguage] = useState<"English" | "Hindi">("English");
+
+  const enableNotifications = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        // Get their location and push token simultaneously
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const messaging = getMessaging(app); 
+          const token = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
+          
+          if (token && user?.uid) {
+            await updateDoc(doc(db, "volunteers", user.uid), {
+              fcmToken: token,
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            });
+            setNotificationsEnabled(true);
+            alert("Background alerts enabled! You are now connected to the emergency grid.");
+          }
+        });
+      } else {
+        alert("You must allow permissions in your browser to receive alerts.");
+      }
+    } catch (error) {
+      console.error("Error enabling notifications:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -315,7 +344,17 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
           </div>
 
           <div className="flex items-center gap-3 relative z-10">
-            {/* Siren toggle removed from here as requested */}
+            <button 
+              onClick={enableNotifications} 
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                notificationsEnabled 
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+                  : "bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10"
+              }`}
+            >
+              <Bell className={`w-4 h-4 ${notificationsEnabled ? "animate-pulse" : ""}`} />
+              {notificationsEnabled ? "Alerts On" : "Enable Alerts"}
+            </button>
             <button onClick={() => signOut(auth)} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-red-400 transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl border border-white/5">
               <LogOut className="w-4 h-4" /> Logout
             </button>
