@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseUser, setPersistence, indexedDBLocalPersistence } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseUser, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { db, auth, app } from "@/lib/firebase";
 import { ShieldAlert, MapPin, AlertTriangle, Volume2, VolumeX, CheckCircle2, ChevronLeft, PhoneCall, HeartPulse, Stethoscope, Droplet, Check, X, Mail, Lock, User, Phone, LogOut, ShieldCheck, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
@@ -22,14 +22,33 @@ export default function VolunteerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // 1. Check if the phone remembers we logged in previously
+    const hasSecureSession = localStorage.getItem("volunteer_secure_session");
+    if (hasSecureSession) {
+      setIsLoading(true); // Force UI shield up
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsLoading(false);
+      if (currentUser) {
+        // 2. Lock in the session shield on successful auth
+        localStorage.setItem("volunteer_secure_session", "true");
+        setUser(currentUser);
+        setIsLoading(false);
+      } else {
+        // 3. Prevent the "flash" bug: Wait 1.5s to see if Firebase is just lagging behind the UI
+        setTimeout(() => {
+          if (!auth.currentUser) {
+            localStorage.removeItem("volunteer_secure_session");
+            setUser(null);
+            setIsLoading(false);
+          }
+        }, 1500);
+      }
     });
     return () => unsubscribe();
   }, []);
 
-  if (isLoading) return <div className="min-h-screen bg-[#020202] flex items-center justify-center"><ShieldAlert className="w-8 h-8 text-emerald-500 animate-pulse" /></div>;
+  if (isLoading) return <div className="min-h-screen bg-[#020202] flex items-center justify-center"><ShieldAlert className="w-12 h-12 text-emerald-500 animate-pulse drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]" /></div>;
 
   return user ? <CommandCenter user={user} /> : <AuthPortal />;
 }
@@ -49,8 +68,7 @@ function AuthPortal() {
     setLoading(true);
 
     try {
-      // THE FIX: Use IndexedDB, which iOS/Android PWAs do not delete on app close
-      await setPersistence(auth, indexedDBLocalPersistence);
+      await setPersistence(auth, browserLocalPersistence);
 
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
@@ -58,9 +76,9 @@ function AuthPortal() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, "volunteers", userCredential.user.uid), { name, phone, email, registeredAt: new Date() });
       }
+      // Shield is applied in the onAuthStateChanged listener automatically
     } catch (err: any) {
       setError(err.message.replace("Firebase: ", ""));
-    } finally {
       setLoading(false);
     }
   };
@@ -72,16 +90,13 @@ function AuthPortal() {
           @keyframes ekg-trace { 0% { stroke-dashoffset: 2000; } 100% { stroke-dashoffset: 0; } }
           .ekg-glow { stroke-dasharray: 200 2000; animation: ekg-trace 3s linear infinite; filter: drop-shadow(0 0 10px rgba(239, 68, 68, 1)); }
         `}</style>
-
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-
         <div className="absolute w-full h-[40vh] flex items-center opacity-30">
           <svg className="w-full h-full" viewBox="0 0 1000 100" preserveAspectRatio="none">
             <path d="M 0,50 H 200 L 210,30 L 225,90 L 245,-10 L 260,60 L 270,50 H 700 L 710,30 L 725,90 L 745,-10 L 760,60 L 770,50 H 1000" fill="none" stroke="rgba(239, 68, 68, 0.15)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
             <path className="ekg-glow" d="M 0,50 H 200 L 210,30 L 225,90 L 245,-10 L 260,60 L 270,50 H 700 L 710,30 L 725,90 L 745,-10 L 760,60 L 770,50 H 1000" fill="none" stroke="#ef4444" strokeWidth="4" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-
         <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-red-600/15 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '3s' }}></div>
         <div className="absolute -bottom-40 -left-40 w-[800px] h-[800px] bg-amber-600/10 rounded-full blur-[120px]"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_10%,#020202_80%)]"></div>
@@ -142,6 +157,12 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
   const [aiSummaries, setAiSummaries] = useState<Record<string, string>>({});
   const [isAiLoading, setIsAiLoading] = useState<Record<string, boolean>>({});
   const [triageLanguage, setTriageLanguage] = useState<"English" | "Hindi">("English");
+
+  // Also clear the shield if they click manual logout
+  const handleLogout = () => {
+    localStorage.removeItem("volunteer_secure_session");
+    signOut(auth);
+  };
 
   useEffect(() => {
     const initializeGridConnection = async () => {
@@ -330,7 +351,7 @@ function CommandCenter({ user }: { user: FirebaseUser }) {
           </div>
 
           <div className="flex items-center gap-3 relative z-10">
-            <button onClick={() => signOut(auth)} className="flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300 transition-colors bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-xl border border-red-500/20">
+            <button onClick={handleLogout} className="flex items-center gap-1 text-xs font-bold text-red-400 hover:text-red-300 transition-colors bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-xl border border-red-500/20">
               <LogOut className="w-4 h-4" /> Logout
             </button>
           </div>

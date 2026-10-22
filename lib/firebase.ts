@@ -1,6 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-// Notice we added 'Auth' to the end of this import list:
-import { getAuth, initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, Auth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence, Auth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -13,21 +12,12 @@ const firebaseConfig = {
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth: Auth = getAuth(app);
 const db = getFirestore(app);
 
-// FIX: We explicitly tell TypeScript that this variable is a Firebase Auth instance
-let auth: Auth;
-
+// Force standard browser local storage (most resilient against mobile PWA app closures)
 if (typeof window !== "undefined") {
-  try {
-    auth = initializeAuth(app, {
-      persistence: [indexedDBLocalPersistence, browserLocalPersistence]
-    });
-  } catch (error) {
-    auth = getAuth(app);
-  }
-} else {
-  auth = getAuth(app);
+  setPersistence(auth, browserLocalPersistence).catch(console.error);
 }
 
 export { app, auth, db };
