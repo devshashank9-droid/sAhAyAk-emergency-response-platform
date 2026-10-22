@@ -1,6 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-// 1. ADD setPersistence and browserLocalPersistence to this import:
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth"; 
+import { getAuth, setPersistence, indexedDBLocalPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -12,16 +11,15 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 2. ADD THIS FIX: Force Firebase to remember the user on this device forever
+// Ironclad persistence: Try IndexedDB (survives better on mobile/iOS), fallback to standard local storage
 if (typeof window !== 'undefined') {
-  setPersistence(auth, browserLocalPersistence).catch((error) => {
-    console.error("Firebase persistence error:", error);
-  });
+  setPersistence(auth, indexedDBLocalPersistence)
+    .catch(() => setPersistence(auth, browserLocalPersistence))
+    .catch((err) => console.error("Firebase Auth Persistence Error:", err));
 }
 
 export { app, auth, db };
