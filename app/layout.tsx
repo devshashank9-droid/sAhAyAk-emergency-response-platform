@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import "./globals.css"; // Ensure this matches your CSS import
+import "./globals.css";
+import InstallPrompt from "@/components/InstallPrompt"; // Imported your new install prompt
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -26,7 +27,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <InstallPrompt /> {/* Added the install popup to render on all pages */}
+      </body>
     </html>
   );
 }
