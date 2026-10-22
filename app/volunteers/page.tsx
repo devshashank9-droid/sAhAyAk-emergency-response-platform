@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseUser, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, User as FirebaseUser, setPersistence, indexedDBLocalPersistence } from "firebase/auth";
 import { collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { db, auth, app } from "@/lib/firebase";
 import { ShieldAlert, MapPin, AlertTriangle, Volume2, VolumeX, CheckCircle2, ChevronLeft, PhoneCall, HeartPulse, Stethoscope, Droplet, Check, X, Mail, Lock, User, Phone, LogOut, ShieldCheck, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
@@ -49,8 +49,8 @@ function AuthPortal() {
     setLoading(true);
 
     try {
-      // THE FIX: Force the browser to save this login permanently before authenticating
-      await setPersistence(auth, browserLocalPersistence);
+      // THE FIX: Use IndexedDB, which iOS/Android PWAs do not delete on app close
+      await setPersistence(auth, indexedDBLocalPersistence);
 
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
