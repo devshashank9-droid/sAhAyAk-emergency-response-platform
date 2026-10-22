@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { ShieldAlert, Activity, Navigation, Clock, UserCheck, Phone, Plus, Trash2, Flame, HeartPulse, User, MessageSquare, X, WifiOff } from "lucide-react";
+import { ShieldAlert, Activity, Navigation, Clock, UserCheck, Phone, Plus, Trash2, Flame, HeartPulse, User, MessageSquare, X, WifiOff, LogOut } from "lucide-react";
 import { collection, addDoc, serverTimestamp, doc, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Chat from "@/components/Chat";
@@ -15,9 +15,8 @@ const LiveMap = dynamic(() => import("@/components/Map"), {
 interface Contact { name: string; phone: string; }
 interface UserProfile { name: string; age: string; weight: string; height: string; bloodGroup: string; medicalInfo: string; }
 
-// --- MATH FUNCTION FOR BACKGROUND NOTIFICATIONS ---
 function getDistanceInMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371e3; // Earth's radius in meters
+  const R = 6371e3; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
@@ -31,14 +30,11 @@ export default function Home() {
   const [incidentId, setIncidentId] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
-  
   const [showTooltip, setShowTooltip] = useState(false);
-
   const [responderInfo, setResponderInfo] = useState<{name: string, phone: string} | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
-
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isCheckingProfile, setIsCheckingProfile] = useState(true);
   const [formData, setFormData] = useState<UserProfile>({ name: "", age: "", weight: "", height: "", bloodGroup: "", medicalInfo: "" });
@@ -98,6 +94,16 @@ export default function Home() {
     localStorage.setItem("userProfile", JSON.stringify(formData));
   };
 
+  // THE NEW LOGOUT FUNCTION: Wipes all data and resets the victim screen
+  const handleLogout = () => {
+    if (confirm("Are you sure you want to log out and clear your Medical ID?")) {
+      localStorage.removeItem("userProfile");
+      localStorage.removeItem("emergencyContacts");
+      setUserProfile(null);
+      setContacts([]);
+    }
+  };
+
   const addContact = () => {
     if (newName.trim() && newPhone.trim()) {
       const updated = [...contacts, { name: newName, phone: newPhone }];
@@ -137,16 +143,13 @@ export default function Home() {
 
   const handleSOS = async () => {
     if (!location) return alert("Still acquiring GPS signal. Please wait a second and try again!");
-    
     if (isOffline) {
       alert("No internet connection detected. Initiating Deadzone Protocol (SMS Fallback).");
       triggerSMSFallback();
       return;
     }
-
     setStatus("sending");
     try {
-      // 1. Create the incident in the database
       const docRef = await addDoc(collection(db, "incidents"), {
         location: { latitude: location[0], longitude: location[1] },
         status: "active", 
@@ -158,7 +161,6 @@ export default function Home() {
       setIncidentId(docRef.id);
       setStatus("searching");
 
-      // 2. Trigger the Push Notifications to all Volunteers
       const volSnapshot = await getDocs(collection(db, "volunteers"));
       const tokens: string[] = [];
       let closestDistance = Infinity;
@@ -183,7 +185,6 @@ export default function Home() {
           })
         });
       }
-
     } catch (err) {
       console.error(err);
       alert("Data network failed to reach Command Center. Initiating Deadzone Protocol (SMS Fallback).");
@@ -249,8 +250,7 @@ export default function Home() {
           .blob-2 { animation: mesh2 18s ease-in-out infinite; }
         `}</style>
         
-        <div 
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] rounded-full blur-[140px] transition-all duration-[2000ms] ease-in-out
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vh] rounded-full blur-[140px] transition-all duration-[2000ms] ease-in-out
           ${status === 'dispatched' ? 'bg-emerald-600/25 animate-pulse' : 
             status === 'searching' ? 'bg-amber-500/20 animate-pulse' : 
             status === 'sending' ? 'bg-red-600/20' : 
@@ -287,14 +287,19 @@ export default function Home() {
             )}
           </div>
 
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 items-center">
             {isOffline && (
               <div className="flex items-center gap-1 bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-1 rounded text-[10px] font-bold animate-pulse">
                 <WifiOff className="w-3 h-3" /> Offline
               </div>
             )}
-            <button onClick={() => setUserProfile(null)} className="text-xs text-slate-300 hover:text-white flex items-center gap-1"><User className="w-3 h-3"/> Profile</button>
-            <a href="/volunteers" className="text-xs font-semibold text-slate-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full border border-white/10 backdrop-blur-md relative z-50 cursor-pointer pointer-events-auto">Volunteers &rarr;</a>
+            
+            {/* NEW LOGOUT BUTTON */}
+            <button onClick={handleLogout} className="text-[10px] font-bold text-red-400 hover:text-white flex items-center gap-1 bg-red-500/10 hover:bg-red-500/30 px-2 py-1.5 rounded-lg border border-red-500/20 transition-colors">
+              <LogOut className="w-3 h-3"/> Logout
+            </button>
+
+            <a href="/volunteers" className="text-xs font-semibold text-slate-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-md relative z-50 cursor-pointer pointer-events-auto">Volunteers &rarr;</a>
           </div>
         </div>
       </nav>
